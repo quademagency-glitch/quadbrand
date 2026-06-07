@@ -1,0 +1,419 @@
+@import "tailwindcss";
+
+/* ============================================
+   QuadBrand Design System
+   White + Cyan/Magenta Premium Theme
+   ============================================ */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fc;
+  --bg-card: #ffffff;
+  --bg-elevated: #f0f2f8;
+  --bg-muted: #f4f5f9;
+  
+  /* Borders */
+  --border: #e2e4ec;
+  --border-hover: #d0d4e0;
+  --border-active: #00d4ff;
+
+  /* Text */
+  --text-primary: #0f1019;
+  --text-secondary: #6b7089;
+  --text-tertiary: #9ca0b8;
+  --text-inverse: #ffffff;
+  
+  /* Accent Colors */
+  --accent-cyan: #00d4ff;
+  --accent-cyan-light: #e0f9ff;
+  --accent-cyan-dark: #00a8cc;
+  --accent-magenta: #ff00e5;
+  --accent-magenta-light: #ffe0fb;
+  --accent-magenta-dark: #cc00b8;
+  --accent-purple: #7b61ff;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #00d4ff, #ff00e5);
+  --gradient-subtle: linear-gradient(135deg, #00d4ff20, #ff00e520);
+  --gradient-mesh: radial-gradient(ellipse at 20% 50%, #00d4ff15 0%, transparent 50%),
+                   radial-gradient(ellipse at 80% 20%, #ff00e515 0%, transparent 50%),
+                   radial-gradient(ellipse at 50% 80%, #7b61ff10 0%, transparent 50%);
+  
+  /* Status */
+  --success: #00c853;
+  --warning: #ff9100;
+  --error: #ff3d57;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
+  --shadow-glow-cyan: 0 4px 24px rgba(0, 212, 255, 0.25);
+  --shadow-glow-magenta: 0 4px 24px rgba(255, 0, 229, 0.25);
+  --shadow-glow-gradient: 0 4px 24px rgba(0, 212, 255, 0.2), 0 4px 24px rgba(255, 0, 229, 0.2);
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Dark Mode */
+.dark {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a25;
+  --bg-elevated: #22222f;
+  --bg-muted: #16161f;
+  
+  --border: #2a2a3a;
+  --border-hover: #3a3a4a;
+  
+  --text-primary: #f0f0f5;
+  --text-secondary: #8888a0;
+  --text-tertiary: #5a5a70;
+  --text-inverse: #0f1019;
+  
+  --accent-cyan-light: #00d4ff15;
+  --accent-magenta-light: #ff00e515;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Tailwind theme tokens */
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: 'Inter', var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', var(--font-geist-mono), monospace;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   Glassmorphism Cards
+   ============================================ */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(0, 212, 255, 0.15);
+}
+
+.dark .glass-card {
+  background: rgba(26, 26, 37, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   Gradient Button
+   ============================================ */
+
+.btn-gradient {
+  background: var(--gradient-primary);
+  color: white;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-glow-gradient);
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.btn-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #00d4ff, #7b61ff, #ff00e5);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.btn-gradient:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 32px rgba(0, 212, 255, 0.3), 0 6px 32px rgba(255, 0, 229, 0.3);
+}
+
+.btn-gradient:hover::before {
+  opacity: 1;
+}
+
+.btn-gradient > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-glow-cyan);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   Gradient Text
+   ============================================ */
+
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Animated Gradient Mesh Background
+   ============================================ */
+
+.gradient-mesh {
+  position: relative;
+}
+
+.gradient-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-mesh);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   Animated Gradient Orbs
+   ============================================ */
+
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes float-medium {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, -20px) scale(1.1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.orb-cyan {
+  background: var(--accent-cyan);
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.orb-magenta {
+  background: var(--accent-magenta);
+  animation: float-medium 10s ease-in-out infinite;
+}
+
+.orb-purple {
+  background: var(--accent-purple);
+  animation: float-slow 12s ease-in-out infinite reverse;
+}
+
+/* ============================================
+   Navigation
+   ============================================ */
+
+.nav-blur {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.dark .nav-blur {
+  background: rgba(10, 10, 15, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   Section Styles
+   ============================================ */
+
+.section-padding {
+  padding: 96px 24px;
+}
+
+@media (min-width: 768px) {
+  .section-padding {
+    padding: 120px 48px;
+  }
+}
+
+/* ============================================
+   Pricing Card Styles
+   ============================================ */
+
+.pricing-popular {
+  position: relative;
+  border: 2px solid transparent;
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.pricing-popular::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--gradient-primary);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ============================================
+   Scroll Animations
+   ============================================ */
+
+.animate-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.animate-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.container-narrow {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container-wide {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Feature icon container */
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-subtle);
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+/* Dot grid pattern */
+.dot-pattern {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 212, 255, 0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
