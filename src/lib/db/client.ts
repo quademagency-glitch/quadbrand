@@ -10,10 +10,13 @@ const globalForPg = global as unknown as {
 export const pool =
   globalForPg.pgPool ||
   new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionString: process.env.DATABASE_URL?.includes('pgbouncer=true') 
+      ? process.env.DATABASE_URL 
+      : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}pgbouncer=true`,
+    max: 2, // Vercel spins up many functions; keep per-function pool tiny
+    idleTimeoutMillis: 3000, // Close idle connections quickly
+    connectionTimeoutMillis: 10000, // Error out fast if pooler is hanging
+    allowExitOnIdle: true, // Allow Node to exit if pool is idle
     ssl: {
       rejectUnauthorized: false
     }
