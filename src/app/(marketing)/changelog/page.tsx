@@ -17,7 +17,7 @@ async function getChangelogPosts() {
 
   const posts = await Promise.all(
     fileNames
-      .filter((fileName) => fileName.endsWith(".mdx"))
+      .filter((fileName) => fileName.endsWith(".mdx") && !fileName.startsWith("."))
       .map(async (fileName) => {
         const filePath = path.join(contentDir, fileName);
         const fileContent = fs.readFileSync(filePath, "utf8");

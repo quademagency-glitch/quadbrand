@@ -26,7 +26,7 @@ export async function generateStaticParams() {
   if (!fs.existsSync(CONTENT_DIR)) return [];
   const files = fs.readdirSync(CONTENT_DIR);
   return files
-    .filter((file) => file.endsWith(".mdx"))
+    .filter((file) => file.endsWith(".mdx") && !file.startsWith("."))
     .map((file) => ({
       slug: file.replace(".mdx", ""),
     }));
