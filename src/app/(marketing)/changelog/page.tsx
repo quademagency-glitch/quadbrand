@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { compileMDX } from "next-mdx-remote/rsc";
-import TopBar from "@/components/layout/TopBar";
+import Navbar from "@/components/marketing/Navbar";
 
 export const metadata = {
   title: "Changelog | QuadBrand",
@@ -48,7 +48,7 @@ export default async function ChangelogPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)]">
-      <TopBar />
+      <Navbar />
       
       <main className="max-w-3xl mx-auto px-4 py-24">
         <div className="mb-16">
