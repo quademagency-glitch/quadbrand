@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Log In — QuadBrand",
   description: "Log in to your QuadBrand account to generate on-brand visuals.",
