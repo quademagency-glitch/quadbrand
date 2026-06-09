@@ -1,104 +1,124 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowRight, Loader2, User, Sparkles } from "lucide-react";
+import { useState, Suspense } from "react";
+import { motion } from "framer-motion";
+import { Loader2, Mail, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import Logo from "@/components/ui/Logo";
-import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase/client";
-import { GoogleAuthProvider, signInWithPopup, sendSignInLinkToEmail } from "firebase/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-export default function SignupPage() {
-  const [fullName, setFullName] = useState("");
+function SignupForm() {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState<"google" | "email" | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
-
-  const handleGoogleSignup = async () => {
-    setLoading("google");
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-      
-      const res = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, name: fullName }), // Passing name is optional, google profile has one
-      });
-      
-      if (res.ok) {
-        router.push("/dashboard");
-      } else {
-        throw new Error("Failed to create session");
-      }
-    } catch (error) {
-      console.error("Google signup failed", error);
-    } finally {
-      setLoading(null);
-    }
-  };
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/onboarding";
+  const supabase = createClient();
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    setLoading("email");
+    setLoading(true);
+    setError("");
+
     try {
-      const actionCodeSettings = {
-        url: `${window.location.origin}/dashboard`,
-        handleCodeInApp: true,
-      };
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem('emailForSignIn', email);
-      // We can also store the full name in local storage so we can retrieve it when they click the link
-      window.localStorage.setItem('nameForSignIn', fullName);
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${redirectUrl}`,
+          data: {
+            full_name: fullName,
+          }
+        },
+      });
+
+      if (error) throw error;
       setSuccess(true);
-    } catch (error) {
-      console.error("Email signup failed", error);
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up");
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Mobile Logo */}
-      <div className="lg:hidden flex items-center mb-8">
-        <Logo showText={true} />
-      </div>
+  const handleGoogleSignup = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up with Google");
+    }
+  };
 
-      <div className="flex items-center gap-2 mb-2">
-        <h1
-          className="text-2xl md:text-3xl font-bold tracking-tight"
-          style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-          id="signup-heading"
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full glass-card p-8 text-center"
         >
-          Create your account
-        </h1>
-        <Sparkles className="w-5 h-5 text-[var(--accent-cyan)]" />
+          <div className="w-16 h-16 bg-[var(--success)]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail className="w-8 h-8 text-[var(--success)]" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "var(--font-outfit), sans-serif" }}>
+            Check your email
+          </h2>
+          <p className="text-[var(--text-secondary)] mb-6">
+            We sent a magic link to <strong className="text-[var(--text-primary)]">{email}</strong>. 
+            Click the link to complete your sign up.
+          </p>
+          <button
+            onClick={() => setSuccess(false)}
+            className="text-sm font-medium text-[var(--accent-cyan)] hover:underline"
+          >
+            Use a different email
+          </button>
+        </motion.div>
       </div>
-      <p className="text-[var(--text-secondary)] mb-8">
-        Start creating on-brand visuals — free, no credit card required.
-      </p>
+    );
+  }
 
-      {!success ? (
-        <>
-          {/* Google OAuth */}
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] p-4 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[var(--accent-cyan)]/20 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[var(--accent-magenta)]/20 blur-[120px] pointer-events-none" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full relative z-10"
+      >
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
+            <div className="w-8 h-8 rounded-lg bg-[var(--gradient-primary)] flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight">QuadBrand</span>
+          </Link>
+          <h1 className="text-3xl font-bold mb-2 tracking-tight" style={{ fontFamily: "var(--font-outfit), sans-serif" }}>
+            Create your account
+          </h1>
+          <p className="text-[var(--text-secondary)]">
+            Start generating on-brand content in seconds
+          </p>
+        </div>
+
+        <div className="glass-card p-8 shadow-xl border border-[var(--border)]">
           <button
             onClick={handleGoogleSignup}
-            disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-secondary)] hover:border-[var(--border-hover)] transition-all duration-200 mb-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            id="signup-google"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors mb-6 font-medium text-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
               />
               <path
@@ -114,141 +134,81 @@ export default function SignupPage() {
                 fill="#EA4335"
               />
             </svg>
-            {loading === "google" ? "Connecting..." : "Continue with Google"}
+            Continue with Google
           </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider">
-              or sign up with email
-            </span>
-            <div className="flex-1 h-px bg-[var(--border)]" />
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border)]"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[var(--bg-card)] px-3 text-[var(--text-tertiary)] font-medium">
+                Or continue with email
+              </span>
+            </div>
           </div>
 
-          {/* Signup Form */}
-          <form onSubmit={handleEmailSignup}>
-            <label
-              className="block text-sm font-medium mb-2"
-              htmlFor="signup-name"
-            >
-              Full name
-            </label>
-            <div className="relative mb-4">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+          <form onSubmit={handleEmailSignup} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-[var(--text-secondary)]">
+                Full Name
+              </label>
               <input
-                id="signup-name"
                 type="text"
+                required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Jane Smith"
-                required
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-sm focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan)]/20 transition-all duration-200 placeholder:text-[var(--text-tertiary)]"
+                className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan)]/20 transition-all text-sm placeholder:text-[var(--text-tertiary)]"
+                placeholder="Jane Doe"
               />
             </div>
 
-            <label
-              className="block text-sm font-medium mb-2"
-              htmlFor="signup-email"
-            >
-              Work email
-            </label>
-            <div className="relative mb-6">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-[var(--text-secondary)]">
+                Email Address
+              </label>
               <input
-                id="signup-email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-sm focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan)]/20 transition-all duration-200 placeholder:text-[var(--text-tertiary)]"
+                className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan)]/20 transition-all text-sm placeholder:text-[var(--text-tertiary)]"
+                placeholder="you@example.com"
               />
             </div>
+
+            {error && (
+              <div className="p-3 text-sm text-[var(--error)] bg-[var(--error)]/10 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={loading !== null || !email || !fullName}
-              className="btn-gradient w-full !rounded-xl !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              id="signup-submit"
+              disabled={loading}
+              className="w-full btn-gradient py-3.5 text-sm disabled:opacity-70 flex justify-center items-center"
             >
-              {loading === "email" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              <span>
-                {loading === "email" ? "Creating account..." : "Create Free Account"}
-              </span>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign Up"}
             </button>
-
-            <p className="text-xs text-[var(--text-tertiary)] mt-3 text-center">
-              By signing up, you agree to our{" "}
-              <a href="#" className="underline hover:text-[var(--text-secondary)]">
-                Terms
-              </a>{" "}
-              and{" "}
-              <a href="#" className="underline hover:text-[var(--text-secondary)]">
-                Privacy Policy
-              </a>
-              .
-            </p>
           </form>
 
-          {/* Free Credits Pill */}
-          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[var(--text-secondary)]">
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              20
-            </div>
-            <span>Free credits included — no credit card needed</span>
-          </div>
-        </>
-      ) : (
-        /* Success State */
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-8"
-        >
-          <div
-            className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-            style={{ background: "var(--gradient-primary)" }}
-          >
-            <Mail className="w-7 h-7 text-white" />
-          </div>
-          <h2
-            className="text-xl font-bold mb-2"
-            style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-          >
-            Check your email
-          </h2>
-          <p className="text-sm text-[var(--text-secondary)] mb-6">
-            We sent a verification link to{" "}
-            <strong className="text-[var(--text-primary)]">{email}</strong>
+          <p className="text-center text-sm text-[var(--text-secondary)] mt-8">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-[var(--accent-cyan)] hover:underline">
+              Log in
+            </Link>
           </p>
-          <button
-            onClick={() => setSuccess(false)}
-            className="text-sm text-[var(--accent-cyan)] hover:underline"
-          >
-            Use a different email
-          </button>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
-      {/* Footer */}
-      <p className="text-sm text-[var(--text-secondary)] mt-8 text-center">
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-semibold text-[var(--text-primary)] hover:text-[var(--accent-cyan)] transition-colors"
-          id="signup-login-link"
-        >
-          Log in <ArrowRight className="inline w-3.5 h-3.5" />
-        </Link>
-      </p>
-    </motion.div>
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+      <SignupForm />
+    </Suspense>
   );
 }

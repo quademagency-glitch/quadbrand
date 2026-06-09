@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <strong>Brand Data:</strong> When you onboard a brand, we store the website URL you provide, the generated color palettes, fonts, and brand summaries. This data is used solely to generate images for your specific workspace.
           </p>
           <p>
-            <strong>Payment Data:</strong> We use Stripe and Paystack as our payment processors. We do not store full credit card numbers on our servers. We only store your customer IDs and subscription status.
+            <strong>Payment Data:</strong> We use Paystack as our payment processor. We do not store full credit card numbers on our servers. We only store your customer IDs and subscription status.
           </p>
 
           <h2>2. How We Use Your Information</h2>

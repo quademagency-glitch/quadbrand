@@ -11,6 +11,7 @@ import {
   Clock,
   Sparkles,
   Loader2,
+  Star,
 } from "lucide-react";
 import ImageDetailModal from "@/components/library/ImageDetailModal";
 
@@ -21,33 +22,38 @@ interface DBImage {
   image_url: string;
   storage_path: string | null;
   status: string;
+  is_winner?: boolean;
+  performance_note?: string;
   created_at: string;
 }
 
 export default function LibraryPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
+  const [winnersOnly, setWinnersOnly] = useState(false);
   const [selectedImage, setSelectedImage] = useState<DBImage | null>(null);
   
   const [images, setImages] = useState<DBImage[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchImages() {
-      try {
-        const res = await fetch("/api/images");
-        const json = await res.json();
-        if (json.status === "success") {
-          setImages(json.data);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  const fetchImages = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/images?winnersOnly=${winnersOnly}`);
+      const json = await res.json();
+      if (json.status === "success") {
+        setImages(json.data);
       }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchImages();
-  }, []);
+  }, [winnersOnly]);
 
   return (
     <div className="max-w-6xl">
@@ -88,9 +94,16 @@ export default function LibraryPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors">
-            <Filter className="w-4 h-4" />
-            Filters
+          <button 
+            onClick={() => setWinnersOnly(!winnersOnly)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+              winnersOnly 
+                ? "border-[var(--accent-cyan)] bg-[var(--accent-cyan-light)] text-[var(--accent-cyan-dark)]"
+                : "border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]"
+            }`}
+          >
+            <Star className={`w-4 h-4 ${winnersOnly ? "fill-[var(--accent-cyan-dark)]" : ""}`} />
+            Winners Only
           </button>
           <div className="flex border border-[var(--border)] rounded-xl overflow-hidden">
             <button
@@ -161,6 +174,12 @@ export default function LibraryPage() {
                       <Sparkles className="w-6 h-6 text-[var(--text-tertiary)]" />
                     </div>
                   )}
+                  {img.is_winner && (
+                    <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1 z-10">
+                      <Star className="w-3 h-3 fill-yellow-900" />
+                      WINNER
+                    </div>
+                  )}
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <div className="flex gap-2">
@@ -219,7 +238,10 @@ export default function LibraryPage() {
       {/* Image Detail Modal */}
       <ImageDetailModal
         isOpen={!!selectedImage}
-        onClose={() => setSelectedImage(null)}
+        onClose={() => {
+          setSelectedImage(null);
+          fetchImages(); // Refresh if tags were changed
+        }}
         image={selectedImage}
       />
     </div>

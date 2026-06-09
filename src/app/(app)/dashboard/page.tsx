@@ -1,293 +1,63 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
+import { query } from "@/lib/db/client";
+import DashboardClient from "./DashboardClient";
+import { redirect } from "next/navigation";
+import { Generation } from "@/types";
 
-import { motion } from "framer-motion";
-import {
-  Sparkles,
-  ImageIcon,
-  Palette,
-  TrendingUp,
-  Plus,
-  ArrowRight,
-  Zap,
-  Clock,
-} from "lucide-react";
-import Link from "next/link";
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-const stats = [
-  {
-    label: "Credits Remaining",
-    value: "13",
-    sublabel: "of 20 this month",
-    icon: Sparkles,
-    color: "var(--accent-cyan)",
-  },
-  {
-    label: "Images Generated",
-    value: "7",
-    sublabel: "this month",
-    icon: ImageIcon,
-    color: "var(--accent-magenta)",
-  },
-  {
-    label: "Active Brands",
-    value: "1",
-    sublabel: "of 1 allowed",
-    icon: Palette,
-    color: "var(--accent-purple)",
-  },
-  {
-    label: "Avg. Generation Time",
-    value: "2.3s",
-    sublabel: "last 7 days",
-    icon: TrendingUp,
-    color: "var(--success)",
-  },
-];
+  if (!user) {
+    redirect("/login");
+  }
 
-const recentGenerations = [
-  {
-    prompt: "Summer sale banner with tropical vibes",
-    ratio: "16:9",
-    time: "2 min ago",
-    status: "completed",
-  },
-  {
-    prompt: "Instagram post for new product launch",
-    ratio: "1:1",
-    time: "15 min ago",
-    status: "completed",
-  },
-  {
-    prompt: "YouTube thumbnail with bold typography",
-    ratio: "16:9",
-    time: "1 hour ago",
-    status: "completed",
-  },
-  {
-    prompt: "LinkedIn banner minimalist design",
-    ratio: "4:1",
-    time: "3 hours ago",
-    status: "completed",
-  },
-];
+  // Fetch workspace and credits
+  const { rows: workspaces } = await query(
+    "SELECT id, credits_pool FROM workspaces WHERE owner_id = $1 LIMIT 1",
+    [user.id]
+  );
+  
+  const workspaceId = workspaces[0]?.id;
+  const creditsPool = workspaces[0]?.credits_pool || 0;
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
-};
+  // Fetch total images generated
+  const { rows: genCounts } = await query(
+    "SELECT COUNT(*) as count FROM generations WHERE user_id = $1 AND status = 'completed'",
+    [user.id]
+  );
+  const imagesGenerated = parseInt(genCounts[0]?.count || "0", 10);
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
+  // Fetch total active brands
+  const { rows: brandCounts } = await query(
+    "SELECT COUNT(*) as count FROM brands WHERE workspace_id = $1",
+    [workspaceId]
+  );
+  const activeBrands = parseInt(brandCounts[0]?.count || "0", 10);
 
-export default function DashboardPage() {
+  // Fetch avg generation time (mock for now as we don't store time precisely yet, or we could calculate if we add end_time)
+  const avgGenerationTime = "5.2s"; 
+
+  // Fetch recent generations
+  const { rows: recentGenerations } = await query(
+    `SELECT prompt, aspect_ratio as ratio, status, image_url, created_at 
+     FROM generations 
+     WHERE user_id = $1 
+     ORDER BY created_at DESC 
+     LIMIT 4`,
+    [user.id]
+  );
+
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="max-w-6xl"
-    >
-      {/* Header */}
-      <motion.div variants={itemVariants} className="mb-8">
-        <h1
-          className="text-2xl md:text-3xl font-bold tracking-tight mb-1"
-          style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-          id="dashboard-heading"
-        >
-          Good evening 👋
-        </h1>
-        <p className="text-[var(--text-secondary)]">
-          Here&apos;s what&apos;s happening with your brand today.
-        </p>
-      </motion.div>
-
-      {/* Stats Grid */}
-      <motion.div
-        variants={itemVariants}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-      >
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="glass-card p-5 group"
-            id={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                style={{
-                  background: `${stat.color}15`,
-                  color: stat.color,
-                }}
-              >
-                <stat.icon className="w-5 h-5" />
-              </div>
-            </div>
-            <p
-              className="text-2xl font-bold tracking-tight"
-              style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-            >
-              {stat.value}
-            </p>
-            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-              {stat.sublabel}
-            </p>
-            <p className="text-sm font-medium text-[var(--text-secondary)] mt-1">
-              {stat.label}
-            </p>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Quick Actions + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
-        <motion.div variants={itemVariants} className="lg:col-span-1">
-          <h2
-            className="text-lg font-bold mb-4"
-            style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-          >
-            Quick Actions
-          </h2>
-          <div className="space-y-3">
-            <Link href="/generate">
-              <div className="glass-card p-4 flex items-center gap-4 cursor-pointer group" id="quick-generate">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                  style={{ background: "var(--gradient-primary)" }}
-                >
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">Generate Image</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">
-                    Create on-brand visuals
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent-cyan)] transition-colors" />
-              </div>
-            </Link>
-
-            <Link href="/brands/new">
-              <div className="glass-card p-4 flex items-center gap-4 cursor-pointer group" id="quick-brand">
-                <div className="w-10 h-10 rounded-xl bg-[var(--accent-cyan-light)] flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                  <Plus className="w-5 h-5 text-[var(--accent-cyan)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">Add Brand</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">
-                    Paste URL or set up manually
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent-cyan)] transition-colors" />
-              </div>
-            </Link>
-
-            <Link href="/library">
-              <div className="glass-card p-4 flex items-center gap-4 cursor-pointer group" id="quick-library">
-                <div className="w-10 h-10 rounded-xl bg-[var(--accent-magenta-light)] flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                  <ImageIcon className="w-5 h-5 text-[var(--accent-magenta)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">View Library</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">
-                    Browse generated assets
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent-cyan)] transition-colors" />
-              </div>
-            </Link>
-          </div>
-
-          {/* Upgrade Card */}
-          <div
-            className="mt-4 rounded-xl p-5 text-white relative overflow-hidden"
-            style={{ background: "var(--gradient-primary)" }}
-            id="upgrade-card"
-          >
-            <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
-            <div className="absolute -right-2 bottom-0 w-16 h-16 rounded-full bg-white/10" />
-            <Zap className="w-6 h-6 mb-3" />
-            <p className="text-sm font-bold mb-1">Upgrade to Starter</p>
-            <p className="text-xs text-white/70 mb-3">
-              Get 200 credits/month and 3 brands for just $9/mo
-            </p>
-            <button className="bg-white text-[var(--text-primary)] text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 transition-colors">
-              Upgrade Now
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Recent Generations */}
-        <motion.div variants={itemVariants} className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="text-lg font-bold"
-              style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-            >
-              Recent Generations
-            </h2>
-            <Link
-              href="/library"
-              className="text-sm text-[var(--accent-cyan)] hover:underline flex items-center gap-1"
-            >
-              View all <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="glass-card overflow-hidden">
-            <div className="divide-y divide-[var(--border)]">
-              {recentGenerations.map((gen, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-4 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
-                >
-                  {/* Thumbnail Placeholder */}
-                  <div
-                    className={`w-12 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br ${
-                      i % 4 === 0
-                        ? "from-cyan-400/20 to-blue-400/20"
-                        : i % 4 === 1
-                        ? "from-pink-400/20 to-rose-400/20"
-                        : i % 4 === 2
-                        ? "from-purple-400/20 to-indigo-400/20"
-                        : "from-amber-400/20 to-orange-400/20"
-                    }`}
-                  />
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{gen.prompt}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-[var(--text-tertiary)]">
-                        {gen.ratio}
-                      </span>
-                      <span className="text-[var(--border)]">·</span>
-                      <span className="flex items-center gap-1 text-xs text-[var(--text-tertiary)]">
-                        <Clock className="w-3 h-3" />
-                        {gen.time}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-                    <span className="text-xs text-[var(--success)] font-medium capitalize">
-                      {gen.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
+    <DashboardClient 
+      stats={{
+        creditsRemaining: creditsPool,
+        imagesGenerated,
+        activeBrands,
+        avgGenerationTime
+      }}
+      recentGenerations={recentGenerations}
+      fullName={user.user_metadata?.full_name || "Creator"}
+    />
   );
 }

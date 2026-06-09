@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/firebase/auth";
+import { createClient } from "@/lib/supabase/server";
 import { query } from "@/lib/db/client";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const session = user ? { uid: user.id, email: user.email, name: user.user_metadata?.full_name } : null;
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

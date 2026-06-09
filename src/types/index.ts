@@ -13,7 +13,7 @@ export interface User {
   email: string;
   full_name: string;
   avatar_url: string | null;
-  stripe_customer_id: string | null;
+  paystack_customer_id: string | null;
   plan: Plan;
   credits_balance: number;
   credits_used: number;
@@ -71,6 +71,7 @@ export interface Generation {
   variant_group_id: string | null;
   tags: string[];
   performance_note: string | null;
+  is_winner: boolean;
   parent_image_id: string | null;
   created_at: string;
   updated_at: string;
@@ -92,7 +93,7 @@ export interface CreditTransaction {
   amount: number;
   reason: CreditReason;
   generation_id: string | null;
-  stripe_event_id: string | null;
+  paystack_reference: string | null;
   created_at: string;
 }
 

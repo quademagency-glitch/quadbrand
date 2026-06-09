@@ -13,6 +13,8 @@ import {
   CreditCard,
   ChevronLeft,
   Plus,
+  BarChart2,
+  Gift
 } from "lucide-react";
 import CreditMeter from "./CreditMeter";
 
@@ -37,6 +39,11 @@ const navItems = [
     href: "/library",
     icon: ImageIcon,
   },
+  {
+    label: "Analytics",
+    href: "/analytics",
+    icon: BarChart2,
+  },
 ];
 
 const bottomNavItems = [
@@ -46,9 +53,14 @@ const bottomNavItems = [
     icon: CreditCard,
   },
   {
-    label: "Settings",
-    href: "/settings",
+    label: "Workspace",
+    href: "/workspace",
     icon: Settings,
+  },
+  {
+    label: "Refer & Earn",
+    href: "/referrals",
+    icon: Gift,
   },
 ];
 

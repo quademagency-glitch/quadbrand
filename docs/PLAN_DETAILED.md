@@ -21,7 +21,7 @@ Sorted by ship order (earliest first):
 | 4 | As a **team lead**, I can invite teammates to a shared workspace, set role permissions, and see a shared credit balance, so my whole team works under one brand identity. | Phase 2 |
 | 5 | As a **growth hacker**, I can generate 3–5 visual variants from a single prompt, A/B test them, and tag winners with performance notes, so my creative iteration is fast and organized. | Phase 3 |
 | 6 | As a **content creator**, I can resize any generated image to any social format (9:16, 1:1, 16:9, etc.) with AI-aware reframing, so I repurpose assets without manual cropping. | Phase 3 |
-| 7 | As a **power user**, I can access the full generation API with my API key, so I can integrate BrandForge into my own tools and workflows. | Phase 4 |
+| 7 | As a **power user**, I can access the full generation API with my API key, so I can integrate QuadBrand into my own tools and workflows. | Phase 4 |
 
 ---
 
@@ -50,7 +50,7 @@ These are explicitly out of scope for v1.0. Write them down so scope creep has n
 | **AI — Image Gen** | Replicate API (FLUX 1.1 Pro / SDXL) | Pay-per-use; no GPU infra; cheapest path to production-quality images |
 | **AI — Brand Scraping** | Firecrawl + GPT-4o Vision | Extract colors/fonts/logo from any URL reliably |
 | **Auth** | Supabase Auth (magic link + OAuth) | Built-in; works with the rest of the Supabase stack |
-| **Payments** | Stripe (subscriptions + usage-based credits) | Industry standard; webhooks for credit top-ups |
+| **Payments** | Paystack (subscriptions + usage-based credits) | Industry standard; webhooks for credit top-ups |
 | **Email** | Resend + React Email | Developer-friendly; beautiful transactional emails |
 | **Hosting** | Vercel | Zero-config Next.js deployment; edge functions; preview URLs per PR |
 | **Queue / Jobs** | Vercel Edge Functions + Upstash Redis | Handle async generation status polling without a separate worker |
@@ -68,7 +68,7 @@ id                uuid PK
 email             text UNIQUE
 full_name         text
 avatar_url        text
-stripe_customer_id text
+paystack_customer_id text
 plan              enum(free, starter, pro, team)
 credits_balance   int          -- current credit balance
 credits_used      int          -- lifetime usage
@@ -146,7 +146,7 @@ user_id         uuid → users
 amount          int      -- positive = added, negative = spent
 reason          enum(subscription, topup, generation, refund, bonus)
 generation_id   uuid NULLABLE
-stripe_event_id text NULLABLE
+paystack_reference text NULLABLE
 ```
 
 ---
@@ -199,7 +199,7 @@ brandforge/
 │       │   └── vectorize/route.ts
 │       ├── reference-ads/route.ts
 │       ├── webhooks/
-│       │   ├── stripe/route.ts
+│       │   ├── paystack/route.ts
 │       │   └── replicate/route.ts
 │       └── v1/                   # Public API (Phase 4)
 │           └── messages/route.ts
@@ -237,7 +237,7 @@ brandforge/
 │   ├── replicate.ts              # Replicate API wrapper
 │   ├── firecrawl.ts              # Brand URL scraping
 │   ├── openai.ts                 # GPT-4o Vision for brand analysis
-│   ├── stripe.ts                 # Stripe client + helpers
+│   ├── paystack.ts               # Paystack client + helpers
 │   ├── credits.ts                # Credit deduction + validation logic
 │   └── embeddings.ts             # pgvector semantic search helpers
 │
@@ -296,7 +296,7 @@ Numbered in ship order. Each step should be deployable and testable before start
 12. **Image detail modal** — View full-res; copy prompt; regenerate; edit; resize; remove background; vectorize (one action at a time)
 13. **Reference ad library** — Curated library of 200+ real ads with semantic search (pgvector); browse by industry; "Recreate in my brand" button
 14. **Workspace & team members** — Invite by email; roles (owner/admin/editor/viewer); shared credit pool; workspace switcher
-15. **Stripe billing** — Subscription plans (Free / Starter $9 / Pro $29 / Team $79); credit top-up packs; webhook handlers; Stripe Customer Portal
+15. **Paystack billing** — Subscription plans (Free / Starter $9 / Pro $29 / Team $79); credit top-up packs; webhook handlers; Paystack Customer Portal
 
 ### Phase 3 — Power Features (Weeks 7–9)
 > Goal: Users iterate faster and BrandForge becomes habit-forming.

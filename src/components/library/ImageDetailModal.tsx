@@ -13,8 +13,13 @@ import {
   Tag,
   Check,
   Trash2,
+  Image as ImageIcon,
+  Eraser,
+  PenTool,
+  Star,
+  Loader2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface DBImage {
   id: string;
@@ -24,6 +29,8 @@ interface DBImage {
   storage_path: string | null;
   status: string;
   created_at: string;
+  is_winner?: boolean;
+  performance_note?: string;
   model?: string;
   brand?: string;
 }
@@ -41,8 +48,57 @@ export default function ImageDetailModal({
 }: ImageDetailModalProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "actions">("details");
+  
+  const [isWinner, setIsWinner] = useState(image?.is_winner || false);
+  const [note, setNote] = useState(image?.performance_note || "");
+  const [savingNote, setSavingNote] = useState(false);
+  const [processingAction, setProcessingAction] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (image) {
+      setIsWinner(image.is_winner || false);
+      setNote(image.performance_note || "");
+    }
+  }, [image]);
 
   if (!image) return null;
+
+  const handleSaveDetails = async () => {
+    setSavingNote(true);
+    try {
+      await fetch("/api/images", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: image.id, is_winner: isWinner, performance_note: note }),
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleProcessAction = async (actionType: string) => {
+    setProcessingAction(actionType);
+    try {
+      const res = await fetch("/api/images/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId: image.id, action: actionType, prompt: actionType === "edit" ? "Make it better" : undefined }),
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        onClose(); // Close modal on success, library will refresh (ideally)
+      } else {
+        alert("Action failed: " + data.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to process action");
+    } finally {
+      setProcessingAction(null);
+    }
+  };
 
   const copyPrompt = () => {
     navigator.clipboard.writeText(image.prompt);
@@ -184,47 +240,75 @@ export default function ImageDetailModal({
 
                     {/* Tags */}
                     <div>
-                      <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5 block">
-                        Tags
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        <button className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-tertiary)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)] transition-colors">
-                          <Tag className="w-3 h-3" />
-                          Add tag
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider block">
+                          Winner
+                        </label>
+                        <button
+                          onClick={() => {
+                            setIsWinner(!isWinner);
+                          }}
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-colors ${
+                            isWinner
+                              ? "bg-yellow-400/20 text-yellow-600 border border-yellow-400"
+                              : "bg-[var(--bg-secondary)] text-[var(--text-tertiary)] border border-[var(--border)] hover:bg-[var(--bg-card)]"
+                          }`}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${isWinner ? "fill-yellow-600" : ""}`} />
+                          {isWinner ? "Winner" : "Mark as Winner"}
                         </button>
                       </div>
                     </div>
 
                     {/* Performance Note */}
                     <div>
-                      <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5 block">
-                        Performance Note
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider block">
+                          Performance Note
+                        </label>
+                      </div>
                       <textarea
-                        placeholder="How did this image perform? Mark as winner..."
-                        rows={2}
+                        placeholder="How did this image perform? Note CTR or engagement..."
+                        rows={3}
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] text-sm focus:outline-none focus:border-[var(--accent-cyan)] transition-all resize-none placeholder:text-[var(--text-tertiary)]"
                       />
+                      <div className="mt-2 flex justify-end">
+                        <button 
+                          onClick={handleSaveDetails}
+                          disabled={savingNote}
+                          className="px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border)] text-xs font-medium rounded-lg hover:border-[var(--accent-cyan)] transition-colors flex items-center gap-1"
+                        >
+                          {savingNote ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Save Details
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
                   /* Actions Tab */
                   <div className="space-y-2">
                     {[
-                      { icon: RefreshCw, label: "Regenerate", desc: "Same prompt, new result", color: "var(--accent-cyan)" },
-                      { icon: Copy, label: "Generate Variants", desc: "Create 3–5 variations", color: "var(--accent-magenta)" },
-                      { icon: Maximize2, label: "Resize", desc: "AI-aware reframing", color: "var(--accent-purple)" },
-                      { icon: Sparkles, label: "Edit with AI", desc: "Modify with a prompt", color: "var(--accent-cyan)" },
+                      { id: "remove_bg", icon: Eraser, label: "Remove Background", desc: "Transparent PNG (1 credit)", color: "var(--accent-magenta)" },
+                      { id: "vectorize", icon: PenTool, label: "Vectorize", desc: "High-quality AI vector (1 credit)", color: "var(--accent-purple)" },
+                      { id: "edit", icon: Sparkles, label: "Edit with AI", desc: "Modify with prompt (2 credits)", color: "var(--accent-cyan)" },
                     ].map((action) => (
                       <button
-                        key={action.label}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors text-left"
+                        key={action.id}
+                        onClick={() => handleProcessAction(action.id)}
+                        disabled={processingAction !== null}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors text-left disabled:opacity-50"
                       >
                         <div
                           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                           style={{ background: `${action.color}15`, color: action.color }}
                         >
-                          <action.icon className="w-4 h-4" />
+                          {processingAction === action.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <action.icon className="w-4 h-4" />
+                          )}
                         </div>
                         <div>
                           <p className="text-sm font-medium">{action.label}</p>

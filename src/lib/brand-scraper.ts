@@ -1,7 +1,9 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || "");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+});
 
 export interface ExtractedBrandData {
   colors: string[];
@@ -12,7 +14,7 @@ export interface ExtractedBrandData {
 }
 
 export async function scrapeAndAnalyzeBrand(url: string): Promise<ExtractedBrandData> {
-  if (!process.env.FIRECRAWL_API_KEY || !process.env.GOOGLE_GEMINI_API_KEY) {
+  if (!process.env.FIRECRAWL_API_KEY || !process.env.OPENAI_API_KEY) {
     throw new Error("Missing API keys for brand scraping");
   }
 
@@ -33,9 +35,7 @@ export async function scrapeAndAnalyzeBrand(url: string): Promise<ExtractedBrand
   const markdownContent = data.markdown || "";
   const screenshotUrl = data.screenshot || "";
 
-  // 2. Analyze with Gemini 2.0 Flash
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
+  // 2. Analyze with OpenAI (gpt-4o-mini)
   const prompt = `
     You are an expert brand designer and marketing strategist. 
     Analyze the following brand website data (extracted as markdown).
@@ -53,28 +53,25 @@ export async function scrapeAndAnalyzeBrand(url: string): Promise<ExtractedBrand
     - aesthetic: A concise, descriptive phrase of the brand's visual aesthetic (e.g., "Minimalist and modern", "Playful and vibrant", "Corporate and trustworthy").
     - industry: The core industry the brand operates in (e.g., "SaaS", "E-commerce", "Healthcare").
     - brand_summary: A 2-3 sentence summary of what the brand does and its target audience.
-    
-    Output strictly as valid JSON matching this schema:
-    {
-      "colors": ["#hex", ...],
-      "fonts": ["font1", ...],
-      "aesthetic": "...",
-      "industry": "...",
-      "brand_summary": "..."
-    }
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a helpful assistant that outputs strictly valid JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1,
+    });
     
-    // Clean up potential markdown formatting from the response
-    const jsonStr = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+    const responseText = response.choices[0].message.content || "{}";
+    const parsedData = JSON.parse(responseText) as ExtractedBrandData;
     
-    const parsedData = JSON.parse(jsonStr) as ExtractedBrandData;
     return parsedData;
   } catch (error) {
-    console.error("Failed to analyze brand with Gemini:", error);
+    console.error("Failed to analyze brand with OpenAI:", error);
     throw new Error("Failed to analyze brand identity");
   }
 }

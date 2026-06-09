@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import { Search, Bell, ChevronDown, LogOut } from "lucide-react";
-import { auth } from "@/lib/firebase/client";
-import { signOut } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 export default function TopBar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
 
+  const supabase = createClient();
+
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      await fetch("/api/auth/session", { method: "DELETE" });
-      router.push("/");
+      await supabase.auth.signOut();
+      router.push("/login");
     } catch (error) {
-      console.error("Logout failed", error);
+      console.error("Failed to sign out", error);
     }
   };
 

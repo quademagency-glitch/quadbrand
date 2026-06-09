@@ -19,6 +19,24 @@ export const PRICING_PLANS = {
     credits: 1000,
     paystackPlanId: process.env.PAYSTACK_PLAN_AGENCY || "PLN_dummy_agency",
   },
+  pack_100: {
+    name: "100 Credit Pack",
+    priceUsd: 5,
+    credits: 100,
+    paystackPlanId: "", // One-time charge doesn't need a plan ID
+  },
+  pack_500: {
+    name: "500 Credit Pack",
+    priceUsd: 20,
+    credits: 500,
+    paystackPlanId: "", 
+  },
+  pack_1500: {
+    name: "1500 Credit Pack",
+    priceUsd: 50,
+    credits: 1500,
+    paystackPlanId: "", 
+  },
 };
 
 export type PlanId = keyof typeof PRICING_PLANS;
@@ -48,9 +66,3 @@ export async function fetchPaystack(endpoint: string, options: RequestInit = {})
   return data;
 }
 
-/**
- * Returns the payment gateway. Currently exclusively Paystack.
- */
-export function getPaymentGatewayForCountry(countryCode: string | null): "paystack" | "stripe" {
-  return "paystack";
-}

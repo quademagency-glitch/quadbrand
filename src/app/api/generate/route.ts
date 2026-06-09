@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/firebase/auth";
+import { createClient } from "@/lib/supabase/server";
 import { query } from "@/lib/db/client";
 import { generateImageWithFlux } from "@/lib/replicate";
+import { dispatchWebhook } from "@/lib/webhooks";
+import { sendEmail } from "@/lib/email";
+import LowCreditsEmail from "../../../../emails/LowCreditsEmail";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const session = user ? { uid: user.id, email: user.email, name: user.user_metadata?.full_name } : null;
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let { prompt, aspectRatio, modelId, brandId, workspaceId } = await request.json();
+    let { prompt, aspectRatio, modelId, brandId, workspaceId, numOutputs = 1 } = await request.json();
 
     if (!prompt || !aspectRatio) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -28,10 +33,12 @@ export async function POST(request: NextRequest) {
       workspaceId = defaultWorkspaces[0].id;
     }
 
-    // Cost logic (Fast=1, Standard=2, Pro=5)
-    let cost = 2;
-    if (modelId === "fast") cost = 1;
-    if (modelId === "pro") cost = 5;
+    // Cost logic (Fast=1, Standard=2, Pro=5) per output
+    let baseCost = 2;
+    if (modelId === "fast") baseCost = 1;
+    if (modelId === "pro") baseCost = 5;
+    
+    const cost = baseCost * numOutputs;
 
     // Verify credits and workspace
     const { rows: workspaces } = await query(
@@ -54,36 +61,78 @@ export async function POST(request: NextRequest) {
       [cost, workspaceId]
     );
 
-    // Create a pending generation record
-    const { rows: generationRows } = await query(
-      `INSERT INTO generations 
-        (workspace_id, brand_id, user_id, prompt, model, aspect_ratio, status, credits_cost) 
-       VALUES ($1, $2, $3, $4, $5, $6, 'generating', $7) RETURNING id`,
-      [workspaceId, brandId || null, session.uid, prompt, modelId || "standard", aspectRatio, cost]
-    );
-    const generationId = generationRows[0].id;
+    // Send Low Credits Email if it just crossed the 20 threshold
+    if (workspace.credits_pool >= 20 && workspace.credits_pool - cost < 20) {
+      // Find the user's email to send the alert to
+      const { rows: userRows } = await query(
+        "SELECT email, full_name FROM user_profiles WHERE id = $1",
+        [session.uid]
+      );
+      if (userRows.length > 0) {
+        const u = userRows[0];
+        // Note: During Resend testing, this will only deliver to the verified testing email address
+        await sendEmail({
+          to: u.email,
+          subject: "Your credits are running low",
+          react: require("react").createElement(LowCreditsEmail, { 
+            name: u.full_name || "Creator", 
+            balance: workspace.credits_pool - cost 
+          }),
+        });
+      }
+    }
+
+    // Create a variant group ID if we are generating multiples
+    const variantGroupId = numOutputs > 1 ? crypto.randomUUID() : null;
+
+    // Create pending generation records
+    const pendingGenerations = [];
+    for (let i = 0; i < numOutputs; i++) {
+      const { rows: generationRows } = await query(
+        `INSERT INTO generations 
+          (workspace_id, brand_id, user_id, prompt, model, aspect_ratio, status, credits_cost, variant_group_id) 
+         VALUES ($1, $2, $3, $4, $5, $6, 'generating', $7, $8) RETURNING id`,
+        [workspaceId, brandId || null, session.uid, prompt, modelId || "standard", aspectRatio, baseCost, variantGroupId]
+      );
+      pendingGenerations.push(generationRows[0].id);
+    }
 
     try {
-      // Call Replicate
-      const imageUrl = await generateImageWithFlux({
-        prompt,
-        aspect_ratio: aspectRatio,
+      // Call Replicate for each output (using Promise.all for parallel generation)
+      const generationPromises = pendingGenerations.map(async (genId) => {
+        const imageUrl = await generateImageWithFlux({
+          prompt,
+          aspect_ratio: aspectRatio,
+        });
+        
+        await query(
+          "UPDATE generations SET image_url = $1, status = 'completed' WHERE id = $2",
+          [imageUrl, genId]
+        );
+        
+        return { id: genId, imageUrl };
       });
 
-      // Update generation with result
-      await query(
-        "UPDATE generations SET image_url = $1, status = 'completed' WHERE id = $2",
-        [imageUrl, generationId]
-      );
+      const results = await Promise.all(generationPromises);
 
       // Log transaction
       await query(
         `INSERT INTO credit_transactions (workspace_id, user_id, amount, reason, generation_id)
          VALUES ($1, $2, $3, 'generation', $4)`,
-        [workspaceId, session.uid, -cost, generationId]
+        [workspaceId, session.uid, -cost, pendingGenerations[0]]
       );
 
-      return NextResponse.json({ status: "success", imageUrl, generationId });
+      // Fire webhooks asynchronously
+      results.forEach(res => {
+        dispatchWebhook(workspaceId, "generation.completed", {
+          id: res.id,
+          image_url: res.imageUrl,
+          prompt,
+          variantGroupId
+        });
+      });
+
+      return NextResponse.json({ status: "success", results, variantGroupId });
     } catch (genError: any) {
       // Refund credits
       await query(
@@ -92,10 +141,16 @@ export async function POST(request: NextRequest) {
       );
       
       // Update generation status
-      await query(
-        "UPDATE generations SET status = 'failed' WHERE id = $1",
-        [generationId]
-      );
+      for (const genId of pendingGenerations) {
+        await query(
+          "UPDATE generations SET status = 'failed' WHERE id = $1",
+          [genId]
+        );
+        dispatchWebhook(workspaceId, "generation.failed", {
+          id: genId,
+          error: genError.message || "Generation failed"
+        });
+      }
 
       throw genError;
     }
