@@ -107,7 +107,7 @@ export default function BillingClient({
               ) : (
                 <div 
                   className="h-full rounded-full transition-all duration-1000 bg-[var(--accent-cyan)]" 
-                  style={{ width: \`\${Math.min(100, (workspace.credits_pool / planCredits) * 100)}%\` }}
+                  style={{ width: `${Math.min(100, (workspace.credits_pool / planCredits) * 100)}%` }}
                 />
               )}
             </div>
@@ -147,7 +147,7 @@ export default function BillingClient({
 
           <ul className="space-y-3 flex-1 mb-6">
             {[
-              \`\${planCredits} credits / month\`,
+              `${planCredits} credits / month`,
               workspace.plan === "pro" ? "Unlimited brands" : "1 brand identity",
               "Standard models",
             ].map((f) => (
@@ -188,11 +188,11 @@ export default function BillingClient({
           ].map((pack) => (
             <div
               key={pack.credits}
-              className={\`relative rounded-xl p-5 border flex flex-col items-center text-center transition-colors hover:border-[var(--accent-magenta)] \${
+              className={`relative rounded-xl p-5 border flex flex-col items-center text-center transition-colors hover:border-[var(--accent-magenta)] ${
                 pack.popular
                   ? "border-[var(--accent-magenta)] bg-[var(--accent-magenta)]/5"
                   : "border-[var(--border)] bg-[var(--bg-secondary)]"
-              }\`}
+              }`}
             >
               {pack.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[var(--accent-magenta)] text-white text-[9px] font-bold uppercase tracking-wider">

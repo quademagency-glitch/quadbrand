@@ -24,9 +24,9 @@ export default async function WorkspacePage() {
 
   // Fetch members (In Phase 3 we only show owner + future invites, but let's query workspace_members if we had them)
   const { rows: members } = await query(
-    \`SELECT u.id, u.full_name, u.email, u.avatar_url, 'owner' as role 
+    `SELECT u.id, u.full_name, u.email, u.avatar_url, 'owner' as role 
      FROM users u 
-     WHERE u.id = $1\`,
+     WHERE u.id = $1`,
     [user.id]
   );
 

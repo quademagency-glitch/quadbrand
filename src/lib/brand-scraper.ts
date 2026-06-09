@@ -1,10 +1,6 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
-});
-
 export interface ExtractedBrandData {
   colors: string[];
   fonts: string[];
@@ -20,6 +16,10 @@ export async function scrapeAndAnalyzeBrand(url: string): Promise<ExtractedBrand
 
   const firecrawl = new FirecrawlApp({
     apiKey: process.env.FIRECRAWL_API_KEY,
+  });
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
   });
 
   // 1. Scrape the URL using Firecrawl

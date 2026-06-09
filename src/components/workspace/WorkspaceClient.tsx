@@ -51,11 +51,11 @@ export default function WorkspaceClient({ workspace, members }: { workspace: Wor
             <button
               key={item.label}
               onClick={() => setActiveTab(item.label)}
-              className={\`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors \${
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === item.label
                   ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-              }\`}
+              }`}
             >
               <item.icon className="w-4 h-4" />
               {item.label}
