@@ -45,10 +45,56 @@ export async function GET(request: Request) {
 
           // Give signup bonus
           if (newWorkspaces.length > 0) {
+            const workspaceId = newWorkspaces[0].id;
+            
             await query(
               "INSERT INTO credit_transactions (workspace_id, user_id, amount, reason) VALUES ($1, $2, 20, 'signup_bonus')",
-              [newWorkspaces[0].id, user.id]
+              [workspaceId, user.id]
             );
+
+            // Handle referral if ref param exists
+            const refParam = searchParams.get('ref');
+            if (refParam && refParam !== user.id) {
+              try {
+                // 1. Check if referrer exists
+                const { rows: referrerRows } = await query(
+                  "SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1",
+                  [refParam]
+                );
+
+                if (referrerRows.length > 0) {
+                  const referrerWorkspaceId = referrerRows[0].id;
+
+                  // 2. Insert referral record
+                  await query(
+                    "INSERT INTO referrals (referrer_id, referred_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                    [refParam, user.id]
+                  );
+
+                  // 3. Give 50 credits to referred user (new user)
+                  await query(
+                    "UPDATE workspaces SET credits_pool = credits_pool + 50 WHERE id = $1",
+                    [workspaceId]
+                  );
+                  await query(
+                    "INSERT INTO credit_transactions (workspace_id, user_id, amount, reason) VALUES ($1, $2, 50, 'bonus')",
+                    [workspaceId, user.id]
+                  );
+
+                  // 4. Give 50 credits to referrer
+                  await query(
+                    "UPDATE workspaces SET credits_pool = credits_pool + 50 WHERE id = $1",
+                    [referrerWorkspaceId]
+                  );
+                  await query(
+                    "INSERT INTO credit_transactions (workspace_id, user_id, amount, reason) VALUES ($1, $2, 50, 'bonus')",
+                    [referrerWorkspaceId, refParam]
+                  );
+                }
+              } catch (refErr) {
+                console.error("Referral processing failed:", refErr);
+              }
+            }
           }
         }
       } catch (dbErr) {

@@ -15,6 +15,12 @@ function SignupForm() {
   const [success, setSuccess] = useState(false);
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/onboarding";
+  const refParam = searchParams.get("ref");
+  
+  const finalRedirect = refParam 
+    ? `/auth/callback?redirect=${redirectUrl}&ref=${refParam}`
+    : `/auth/callback?redirect=${redirectUrl}`;
+
   const supabase = createClient();
 
   const handleEmailSignup = async (e: React.FormEvent) => {
@@ -26,7 +32,7 @@ function SignupForm() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${redirectUrl}`,
+          emailRedirectTo: `${window.location.origin}${finalRedirect}`,
           data: {
             full_name: fullName,
           }
@@ -47,7 +53,7 @@ function SignupForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${finalRedirect}`,
         },
       });
       if (error) throw error;
